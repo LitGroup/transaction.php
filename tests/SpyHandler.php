@@ -23,23 +23,44 @@
 
 declare(strict_types=1);
 
-namespace Test\LitGroup\Transaction\Exception;
+namespace Test\LitGroup\Transaction;
 
-use LitGroup\Transaction\Exception\TransactionException;
-use PHPUnit\Framework\TestCase;
+use LitGroup\Transaction\TransactionHandler;
+use function in_array;
 
-class TransactionExceptionTest extends TestCase
+class SpyHandler implements TransactionHandler
 {
-    function testInstance(): void
-    {
-        $exception = new TransactionException('some message');
-        self::assertInstanceOf(\Exception::class, $exception);
-        self::assertSame('some message', $exception->getMessage());
-        self::assertNull($exception->getPrevious());
+    public const BEGIN = 'begin';
+    public const COMMIT = 'commit';
+    public const ROLLBACK = 'rollBack';
 
-        $previous = new \Exception();
-        $exception = new TransactionException('some message', $previous);
-        self::assertSame('some message', $exception->getMessage());
-        self::assertSame($previous, $exception->getPrevious());
+    /** @var string[] */
+    private $calls = [];
+
+    public function begin(): void
+    {
+        $this->logCall(self::BEGIN);
+    }
+
+    public function commit(): void
+    {
+        $this->logCall(self::COMMIT);
+    }
+
+    public function rollBack(): void
+    {
+        $this->logCall(self::ROLLBACK);
+    }
+
+    /** @return string[] */
+    public function getCalls(): array
+    {
+        return $this->calls;
+    }
+
+    private function logCall(string $call): void
+    {
+        assert(in_array($call, [self::BEGIN, self::COMMIT, self::ROLLBACK]));
+        $this->calls[] = $call;
     }
 }

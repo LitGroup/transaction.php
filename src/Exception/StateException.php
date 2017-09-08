@@ -23,23 +23,12 @@
 
 declare(strict_types=1);
 
-namespace Test\LitGroup\Transaction\Exception;
+namespace LitGroup\Transaction\Exception;
 
-use LitGroup\Transaction\Exception\TransactionException;
-use PHPUnit\Framework\TestCase;
-
-class TransactionExceptionTest extends TestCase
+class StateException extends \RuntimeException
 {
-    function testInstance(): void
+    public function __construct(string $message)
     {
-        $exception = new TransactionException('some message');
-        self::assertInstanceOf(\Exception::class, $exception);
-        self::assertSame('some message', $exception->getMessage());
-        self::assertNull($exception->getPrevious());
-
-        $previous = new \Exception();
-        $exception = new TransactionException('some message', $previous);
-        self::assertSame('some message', $exception->getMessage());
-        self::assertSame($previous, $exception->getPrevious());
+        parent::__construct($message);
     }
 }

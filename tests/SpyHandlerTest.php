@@ -23,23 +23,26 @@
 
 declare(strict_types=1);
 
-namespace Test\LitGroup\Transaction\Exception;
+namespace Test\LitGroup\Transaction;
 
-use LitGroup\Transaction\Exception\TransactionException;
+use LitGroup\Transaction\TransactionHandler;
 use PHPUnit\Framework\TestCase;
 
-class TransactionExceptionTest extends TestCase
+class SpyHandlerTest extends TestCase
 {
-    function testInstance(): void
+    function testCallsLogging(): void
     {
-        $exception = new TransactionException('some message');
-        self::assertInstanceOf(\Exception::class, $exception);
-        self::assertSame('some message', $exception->getMessage());
-        self::assertNull($exception->getPrevious());
+        $handler = new SpyHandler();
+        self::assertInstanceOf(TransactionHandler::class, $handler);
+        self::assertSame([], $handler->getCalls());
 
-        $previous = new \Exception();
-        $exception = new TransactionException('some message', $previous);
-        self::assertSame('some message', $exception->getMessage());
-        self::assertSame($previous, $exception->getPrevious());
+        $handler->begin();
+        self::assertSame([SpyHandler::BEGIN], $handler->getCalls());
+
+        $handler->commit();
+        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
+
+        $handler->rollBack();
+        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT, SpyHandler::ROLLBACK], $handler->getCalls());
     }
 }

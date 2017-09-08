@@ -23,23 +23,42 @@
 
 declare(strict_types=1);
 
-namespace Test\LitGroup\Transaction\Exception;
+namespace LitGroup\Transaction;
 
 use LitGroup\Transaction\Exception\TransactionException;
-use PHPUnit\Framework\TestCase;
 
-class TransactionExceptionTest extends TestCase
+final class Transaction
 {
-    function testInstance(): void
-    {
-        $exception = new TransactionException('some message');
-        self::assertInstanceOf(\Exception::class, $exception);
-        self::assertSame('some message', $exception->getMessage());
-        self::assertNull($exception->getPrevious());
+    /** @var TransactionHandler */
+    private $handler;
 
-        $previous = new \Exception();
-        $exception = new TransactionException('some message', $previous);
-        self::assertSame('some message', $exception->getMessage());
-        self::assertSame($previous, $exception->getPrevious());
+    /**
+     * @throws TransactionException
+     */
+    public function __construct(TransactionHandler $handler)
+    {
+        $handler->begin();
+        $this->handler = $handler;
+    }
+
+    /**
+     * @throws TransactionException
+     */
+    public function commit(): void
+    {
+        $this->getHandler()->commit();
+    }
+
+    /**
+     * @throws TransactionException
+     */
+    public function rollBack(): void
+    {
+        $this->getHandler()->rollBack();
+    }
+
+    private function getHandler(): TransactionHandler
+    {
+        return $this->handler;
     }
 }
