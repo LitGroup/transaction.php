@@ -71,7 +71,8 @@ final class Transaction
  *
  * @internal
  */
-class TransactionStateHandler implements TransactionHandler {
+class TransactionStateHandler implements TransactionHandler
+{
     /** @var TransactionHandler */
     private $decorated;
 
