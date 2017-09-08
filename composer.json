@@ -1,6 +1,6 @@
 {
     "name": "litgroup/transaction",
-    "description": "Abstraction for transaction control on application tier.",
+    "description": "Abstraction for transaction control on an application tier.",
     "type": "library",
     "license": "MIT",
     "authors": [
