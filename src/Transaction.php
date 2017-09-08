@@ -25,6 +25,7 @@ declare(strict_types=1);
 
 namespace LitGroup\Transaction;
 
+use LitGroup\Transaction\Exception\StateException;
 use LitGroup\Transaction\Exception\TransactionException;
 
 final class Transaction
@@ -37,8 +38,8 @@ final class Transaction
      */
     public function __construct(TransactionHandler $handler)
     {
-        $handler->begin();
-        $this->handler = $handler;
+        $this->handler = new TransactionStateHandler($handler);
+        $this->getHandler()->begin();
     }
 
     /**
@@ -62,3 +63,75 @@ final class Transaction
         return $this->handler;
     }
 }
+
+/**
+ * User internally in the Transaction class to control state of a transaction (open/closed).
+ *
+ * You should not use it directly in your code.
+ *
+ * @internal
+ */
+class TransactionStateHandler implements TransactionHandler {
+    /** @var TransactionHandler */
+    private $decorated;
+
+    /** @var bool  */
+    private $isOpen = false;
+
+    public function __construct(TransactionHandler $decorated)
+    {
+        $this->decorated = $decorated;
+    }
+
+    public function begin(): void
+    {
+        $this->getDecorated()->begin();
+        $this->open();
+    }
+
+    public function commit(): void
+    {
+        if (!$this->isOpen()) {
+            throw new StateException('Closed transaction cannot be committed.');
+        }
+
+        try {
+            $this->getDecorated()->commit();
+        } finally {
+            $this->close();
+        }
+    }
+
+    public function rollBack(): void
+    {
+        if (!$this->isOpen()) {
+            throw new StateException('Closed transaction cannot be rolled back.');
+        }
+
+        try {
+            $this->getDecorated()->rollBack();
+        } finally {
+            $this->close();
+        }
+    }
+
+    private function getDecorated(): TransactionHandler
+    {
+        return $this->decorated;
+    }
+
+    private function isOpen(): bool
+    {
+        return $this->isOpen;
+    }
+
+    private function open(): void
+    {
+        $this->isOpen = true;
+    }
+
+    private function close(): void
+    {
+        $this->isOpen = false;
+    }
+};

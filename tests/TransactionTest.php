@@ -25,6 +25,7 @@ declare(strict_types=1);
 
 namespace Test\LitGroup\Transaction;
 
+use LitGroup\Transaction\Exception\StateException;
 use LitGroup\Transaction\Exception\TransactionException;
 use LitGroup\Transaction\Transaction;
 use LitGroup\Transaction\TransactionHandler;
@@ -100,5 +101,61 @@ class TransactionTest extends TestCase
         } catch (TransactionException $caught) {
             self::assertSame($exception, $caught);
         }
+    }
+
+    function testStateExceptionOnCommitOfClosedTransaction(): void
+    {
+        $handler = new SpyHandler();
+        $transaction = new Transaction($handler);
+
+        $transaction->commit();
+        try {
+            $transaction->commit();
+            $this->fail();
+        } catch (StateException $e) {
+            self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
+        }
+    }
+
+    function testStateExceptionOnRollingBackOfClosedTransaction(): void
+    {
+        $handler = new SpyHandler();
+        $transaction = new Transaction($handler);
+
+        $transaction->rollBack();
+        try {
+            $transaction->rollBack();
+            $this->fail();
+        } catch (StateException $e) {
+            self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
+        }
+    }
+
+    function testClosingOnExceptionDuringCommit(): void
+    {
+        $handler = $this->createMock(TransactionHandler::class);
+        $handler->method('commit')->willThrowException(new TransactionException());
+        $transaction = new Transaction($handler);
+
+        try {
+            $transaction->commit();
+        } catch (TransactionException $e) {}
+
+        $this->expectException(StateException::class);
+        $transaction->commit();
+    }
+
+    function testClosingOnExceptionDuringRollback(): void
+    {
+        $handler = $this->createMock(TransactionHandler::class);
+        $handler->method('rollBack')->willThrowException(new TransactionException());
+        $transaction = new Transaction($handler);
+
+        try {
+            $transaction->rollBack();
+        } catch (TransactionException $e) {}
+
+        $this->expectException(StateException::class);
+        $transaction->rollBack();
     }
 }

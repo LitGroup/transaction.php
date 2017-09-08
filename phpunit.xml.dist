@@ -28,7 +28,7 @@
          beStrictAboutCoversAnnotation="false"
          beStrictAboutOutputDuringTests="true"
          beStrictAboutTodoAnnotatedTests="true"
-         beStrictAboutTestsThatDoNotTestAnything="true"
+         beStrictAboutTestsThatDoNotTestAnything="false"
          verbose="true">
     <testsuite name="default">
         <directory suffix="Test.php">tests</directory>
