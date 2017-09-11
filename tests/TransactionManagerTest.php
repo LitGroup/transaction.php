@@ -109,4 +109,66 @@ class TransactionManagerTest extends TestCase
 
         $manager->beginTransaction();
     }
+
+    function testRunTransactional(): void
+    {
+        $returned = $this->manager->runTransactional(function () {
+            return 'result';
+        });
+
+        self::assertSame('result', $returned);
+        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $this->handler->getCalls());
+    }
+
+    function testRunTransactional_Exception(): void
+    {
+        $exception = new \Exception();
+
+        try {
+            $this->manager->runTransactional(function () use ($exception) {
+                throw $exception;
+            });
+            $this->fail();
+        } catch (\Exception $caught) {
+            self::assertSame($exception, $caught);
+        }
+
+        self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $this->handler->getCalls());
+    }
+
+    function testRunTransactional_TransactionException_onCommit(): void
+    {
+        $handler = $this->createMock(TransactionHandler::class);
+        $handler->expects($this->at(1))->method('commit')->willThrowException(new TransactionException());
+        $handler->expects($this->at(2))->method('commit')->willReturn(null);
+        $handler->expects($this->never())->method('rollBack');
+        $manager = new TransactionManager($handler);
+
+
+        try {
+            $manager->runTransactional(function () {});
+            $this->fail();
+        } catch (TransactionException $e) {}
+
+        // Try to open new transaction after exception:
+        $manager->runTransactional(function () {});
+    }
+
+    function testRunTransactional_TransactionException_onBegin(): void
+    {
+        $handler = $this->createMock(TransactionHandler::class);
+        $handler->expects($this->at(0))->method('begin')->willThrowException(new TransactionException());
+        $handler->expects($this->at(1))->method('begin')->willReturn(null);
+        $handler->expects($this->never())->method('rollBack');
+        $manager = new TransactionManager($handler);
+
+
+        try {
+            $manager->runTransactional(function () {});
+            $this->fail();
+        } catch (TransactionException $e) {}
+
+        // Try to open new transaction after exception:
+        $manager->runTransactional(function () {});
+    }
 }

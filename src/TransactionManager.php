@@ -25,7 +25,9 @@ declare(strict_types=1);
 
 namespace LitGroup\Transaction;
 
+use function call_user_func;
 use LitGroup\Transaction\Exception\StateException;
+use LitGroup\Transaction\Exception\TransactionException;
 
 class TransactionManager
 {
@@ -47,6 +49,33 @@ class TransactionManager
     public function beginTransaction(): Transaction
     {
         return new Transaction($this->getHandler());
+    }
+
+
+    /**
+     * Run some code in the transaction.
+     *
+     * @throws \Exception Rethrows exception thrown by $code.
+     * @throws TransactionException
+     *
+     * @return mixed Value returned by $code.
+     */
+    public function runTransactional(callable $code)
+    {
+
+        $transaction = $this->beginTransaction();
+        try {
+            $result = call_user_func($code);
+            $transaction->commit();
+        } catch (TransactionException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+
+            throw $e;
+        }
+
+        return $result;
     }
 
     private function getHandler(): TransactionHandler
