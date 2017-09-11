@@ -26,7 +26,8 @@ declare(strict_types=1);
 namespace Test\LitGroup\Transaction;
 
 use LitGroup\Transaction\Exception\StateException;
-use LitGroup\Transaction\Transaction;
+use LitGroup\Transaction\Exception\TransactionException;
+use LitGroup\Transaction\TransactionHandler;
 use LitGroup\Transaction\TransactionManager;
 use PHPUnit\Framework\TestCase;
 
@@ -68,5 +69,44 @@ class TransactionManagerTest extends TestCase
 
         $this->expectException(StateException::class);
         $this->manager->beginTransaction();
+    }
+
+    function testStartNewTransactionAfterExceptionOnBegin(): void
+    {
+        $handler = $this->createMock(TransactionHandler::class);
+        $handler->expects($this->at(0))->method('begin')->willThrowException(new TransactionException());
+        $handler->expects($this->at(1))->method('begin')->willReturn(null);
+
+        $manager = new TransactionManager($handler);
+
+        try {
+            $manager->beginTransaction();
+            $this->fail();
+        } catch (TransactionException $e) {}
+
+        $manager->beginTransaction();
+    }
+
+    function testStartNewTransactionAfterExceptionOnCommitOrRollback(): void
+    {
+        $handler = $this->createMock(TransactionHandler::class);
+        $handler->method('commit')->willThrowException(new TransactionException());
+        $handler->method('rollBack')->willThrowException(new TransactionException());
+
+        $manager = new TransactionManager($handler);
+
+        $transaction = $manager->beginTransaction();
+        try {
+            $transaction->commit();
+            $this->fail();
+        } catch (TransactionException $e) {}
+
+        $transaction = $manager->beginTransaction();
+        try {
+            $transaction->rollBack();
+            $this->fail();
+        } catch (TransactionException $e) {}
+
+        $manager->beginTransaction();
     }
 }

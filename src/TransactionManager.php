@@ -78,20 +78,27 @@ class SerialTransactionHandler implements TransactionHandler
         if ($this->transactionIsOpen()) {
             throw new StateException('Transaction has been already started.');
         }
+
         $this->getHandler()->begin();
         $this->setTransactionIsOpen(true);
     }
 
     public function commit(): void
     {
-        $this->getHandler()->commit();
-        $this->setTransactionIsOpen(false);
+        try {
+            $this->getHandler()->commit();
+        } finally {
+            $this->setTransactionIsOpen(false);
+        }
     }
 
     public function rollBack(): void
     {
-        $this->getHandler()->rollBack();
-        $this->setTransactionIsOpen(false);
+        try{
+            $this->getHandler()->rollBack();
+        } finally {
+            $this->setTransactionIsOpen(false);
+        }
     }
 
     private function getHandler(): TransactionHandler
