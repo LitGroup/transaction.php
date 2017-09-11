@@ -66,14 +66,12 @@ class TransactionManager
         $transaction = $this->beginTransaction();
         try {
             $result = call_user_func($code);
-            $transaction->commit();
-        } catch (TransactionException $e) {
-            throw $e;
         } catch (\Exception $e) {
             $transaction->rollBack();
-
             throw $e;
         }
+        // Commit outside of try-catch to prevent rollBack() on exception from transaction handler;
+        $transaction->commit();
 
         return $result;
     }

@@ -136,11 +136,11 @@ class TransactionManagerTest extends TestCase
         self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $this->handler->getCalls());
     }
 
-    function testRunTransactional_TransactionException_onCommit(): void
+    function testRunTransactional_ExceptionOfTransactionOnBegin(): void
     {
         $handler = $this->createMock(TransactionHandler::class);
-        $handler->expects($this->at(1))->method('commit')->willThrowException(new TransactionException());
-        $handler->expects($this->at(2))->method('commit')->willReturn(null);
+        $handler->expects($this->at(0))->method('begin')->willThrowException(new TransactionException());
+        $handler->expects($this->at(1))->method('begin')->willReturn(null);
         $handler->expects($this->never())->method('rollBack');
         $manager = new TransactionManager($handler);
 
@@ -154,11 +154,11 @@ class TransactionManagerTest extends TestCase
         $manager->runTransactional(function () {});
     }
 
-    function testRunTransactional_TransactionException_onBegin(): void
+    function testRunTransactional_ExceptionOfTransactionOnCommit(): void
     {
         $handler = $this->createMock(TransactionHandler::class);
-        $handler->expects($this->at(0))->method('begin')->willThrowException(new TransactionException());
-        $handler->expects($this->at(1))->method('begin')->willReturn(null);
+        $handler->expects($this->at(1))->method('commit')->willThrowException(new TransactionException());
+        $handler->expects($this->at(2))->method('commit')->willReturn(null);
         $handler->expects($this->never())->method('rollBack');
         $manager = new TransactionManager($handler);
 
