@@ -25,34 +25,22 @@ declare(strict_types=1);
 
 namespace LitGroup\Transaction;
 
-use LitGroup\Transaction\Exception\StateException;
-use LitGroup\Transaction\Exception\TransactionException;
-
 final class Transaction
 {
     /** @var TransactionHandler */
     private $handler;
 
-    /**
-     * @throws TransactionException
-     */
     public function __construct(TransactionHandler $handler)
     {
         $this->handler = new TransactionStateHandler($handler);
-        $this->getHandler()->begin();
+        $this->begin();
     }
 
-    /**
-     * @throws TransactionException
-     */
     public function commit(): void
     {
         $this->getHandler()->commit();
     }
 
-    /**
-     * @throws TransactionException
-     */
     public function rollBack(): void
     {
         $this->getHandler()->rollBack();
@@ -62,77 +50,78 @@ final class Transaction
     {
         return $this->handler;
     }
+
+    private function begin(): void
+    {
+        $this->getHandler()->begin();
+    }
 }
 
 /**
- * User internally in the Transaction class to control state of a transaction (open/closed).
- *
- * You should not use it directly in your code.
- *
  * @internal
  */
 class TransactionStateHandler implements TransactionHandler
 {
     /** @var TransactionHandler */
-    private $decorated;
+    private $handler;
 
-    /** @var bool  */
-    private $isOpen = false;
+    /** @var bool */
+    private $open = false;
 
-    public function __construct(TransactionHandler $decorated)
+    public function __construct(TransactionHandler $handler)
     {
-        $this->decorated = $decorated;
+        $this->handler = $handler;
     }
 
     public function begin(): void
     {
-        $this->getDecorated()->begin();
-        $this->open();
+        $this->getHandler()->begin();
+        $this->openTransaction();
     }
 
     public function commit(): void
     {
-        if (!$this->isOpen()) {
-            throw new StateException('Closed transaction cannot be committed.');
+        if (!$this->transactionIsOpen()) {
+            throw new StateException('Cannot commit. Transaction has been already closed.');
         }
 
         try {
-            $this->getDecorated()->commit();
+            $this->getHandler()->commit();
         } finally {
-            $this->close();
+            $this->closeTransaction();
         }
     }
 
     public function rollBack(): void
     {
-        if (!$this->isOpen()) {
-            throw new StateException('Closed transaction cannot be rolled back.');
+        if (!$this->transactionIsOpen()) {
+            throw new StateException('Cannot roll back. Transaction has been already closed.');
         }
 
         try {
-            $this->getDecorated()->rollBack();
+            $this->getHandler()->rollBack();
         } finally {
-            $this->close();
+            $this->closeTransaction();
         }
     }
 
-    private function getDecorated(): TransactionHandler
+    private function getHandler(): TransactionHandler
     {
-        return $this->decorated;
+        return $this->handler;
     }
 
-    private function isOpen(): bool
+    private function openTransaction(): void
     {
-        return $this->isOpen;
+        $this->open = true;
     }
 
-    private function open(): void
+    private function closeTransaction(): void
     {
-        $this->isOpen = true;
+        $this->open = false;
     }
 
-    private function close(): void
+    private function transactionIsOpen(): bool
     {
-        $this->isOpen = false;
+        return $this->open;
     }
-};
+}

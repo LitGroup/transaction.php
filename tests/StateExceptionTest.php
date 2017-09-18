@@ -23,18 +23,18 @@
 
 declare(strict_types=1);
 
-namespace Test\LitGroup\Transaction\Exception;
+namespace Test\LitGroup\Transaction;
 
-use LitGroup\Transaction\Exception\StateException;
+use LitGroup\Transaction\StateException;
 use PHPUnit\Framework\TestCase;
 
 class StateExceptionTest extends TestCase
 {
     function testInstance(): void
     {
-        $exception = new StateException('some message');
+        $exception = new StateException('Some message');
 
         self::assertInstanceOf(\RuntimeException::class, $exception);
-        self::assertSame('some message', $exception->getMessage());
+        self::assertEquals('Some message', $exception->getMessage());
     }
 }

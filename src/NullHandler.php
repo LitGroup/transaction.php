@@ -23,12 +23,14 @@
 
 declare(strict_types=1);
 
-namespace LitGroup\Transaction\Exception;
+namespace LitGroup\Transaction;
 
-class StateException extends \RuntimeException
+/**
+ * @codeCoverageIgnore
+ */
+class NullHandler implements TransactionHandler
 {
-    public function __construct(string $message)
-    {
-        parent::__construct($message);
-    }
+    public function begin(): void {}
+    public function commit(): void {}
+    public function rollBack(): void {}
 }

@@ -25,34 +25,19 @@ declare(strict_types=1);
 
 namespace Test\LitGroup\Transaction;
 
-use LitGroup\Transaction\Exception\StateException;
-use LitGroup\Transaction\Exception\TransactionException;
+use LitGroup\Transaction\StateException;
 use LitGroup\Transaction\Transaction;
 use LitGroup\Transaction\TransactionHandler;
 use PHPUnit\Framework\TestCase;
 
 class TransactionTest extends TestCase
 {
-    function testStartOfTransactionOnInstantiation(): void
+    function testBeginningOnInstantiation(): void
     {
         $handler = new SpyHandler();
         new Transaction($handler);
 
         self::assertSame([SpyHandler::BEGIN], $handler->getCalls());
-    }
-
-    function testTransactionExceptionOnBegin(): void
-    {
-        $exception = new TransactionException();
-        $handler = $this->createMock(TransactionHandler::class);
-        $handler->method('begin')->willThrowException($exception);
-
-        try {
-            new Transaction($handler);
-            $this->fail();
-        } catch (TransactionException $caught) {
-            self::assertSame($exception, $caught);
-        }
     }
 
     function testCommit(): void
@@ -64,21 +49,6 @@ class TransactionTest extends TestCase
         self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
     }
 
-    function testTransactionExceptionOnCommit(): void
-    {
-        $exception = new TransactionException();
-        $handler = $this->createMock(TransactionHandler::class);
-        $handler->method('commit')->willThrowException($exception);
-        $transaction = new Transaction($handler);
-
-        try {
-            $transaction->commit();
-            $this->fail();
-        } catch (TransactionException $caught) {
-            self::assertSame($exception, $caught);
-        }
-    }
-
     function testRollingBack(): void
     {
         $handler = new SpyHandler();
@@ -88,72 +58,61 @@ class TransactionTest extends TestCase
         self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
     }
 
-    function testTransactionExceptionOnRollBack(): void
-    {
-        $exception = new TransactionException();
-        $handler = $this->createMock(TransactionHandler::class);
-        $handler->method('rollBack')->willThrowException($exception);
-        $transaction = new Transaction($handler);
-
-        try {
-            $transaction->rollBack();
-            $this->fail();
-        } catch (TransactionException $caught) {
-            self::assertSame($exception, $caught);
-        }
-    }
-
-    function testStateExceptionOnCommitOfClosedTransaction(): void
+    function testCommitClosedTransaction(): void
     {
         $handler = new SpyHandler();
         $transaction = new Transaction($handler);
-
         $transaction->commit();
         try {
             $transaction->commit();
-            $this->fail();
-        } catch (StateException $e) {
-            self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
-        }
+            $this->fail('Cannot commit closed transaction.');
+        } catch (StateException $e) {}
+
+        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
     }
 
-    function testStateExceptionOnRollingBackOfClosedTransaction(): void
+    function testRollBackClosedTransaction(): void
     {
         $handler = new SpyHandler();
         $transaction = new Transaction($handler);
-
         $transaction->rollBack();
         try {
             $transaction->rollBack();
-            $this->fail();
-        } catch (StateException $e) {
-            self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
-        }
+            $this->fail('Cannot commit closed transaction.');
+        } catch (StateException $e) {}
+
+        self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
     }
 
-    function testClosingOnExceptionDuringCommit(): void
+    function testTransactionClosedAfterCommitException(): void
     {
         $handler = $this->createMock(TransactionHandler::class);
-        $handler->method('commit')->willThrowException(new TransactionException());
+        $handler
+            ->expects($this->at(1))
+            ->method('commit')
+            ->willThrowException(new ExampleException());
         $transaction = new Transaction($handler);
 
         try {
             $transaction->commit();
-        } catch (TransactionException $e) {}
+        } catch (ExampleException $e) {}
 
         $this->expectException(StateException::class);
         $transaction->commit();
     }
 
-    function testClosingOnExceptionDuringRollback(): void
+    function testTransactionClosedAfterRollingBackException(): void
     {
         $handler = $this->createMock(TransactionHandler::class);
-        $handler->method('rollBack')->willThrowException(new TransactionException());
+        $handler
+            ->expects($this->at(1))
+            ->method('rollBack')
+            ->willThrowException(new ExampleException());
         $transaction = new Transaction($handler);
 
         try {
             $transaction->rollBack();
-        } catch (TransactionException $e) {}
+        } catch (ExampleException $e) {}
 
         $this->expectException(StateException::class);
         $transaction->rollBack();
