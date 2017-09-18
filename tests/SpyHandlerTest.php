@@ -37,12 +37,12 @@ class SpyHandlerTest extends TestCase
         self::assertSame([], $handler->getCalls());
 
         $handler->begin();
-        self::assertSame([SpyHandler::BEGIN], $handler->getCalls());
-
         $handler->commit();
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
-
         $handler->rollBack();
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT, SpyHandler::ROLLBACK], $handler->getCalls());
+
+        self::assertSame(
+            [SpyHandler::BEGIN, SpyHandler::COMMIT, SpyHandler::ROLLBACK],
+            $handler->getCalls()
+        );
     }
 }

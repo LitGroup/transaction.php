@@ -26,41 +26,43 @@ declare(strict_types=1);
 namespace Test\LitGroup\Transaction;
 
 use LitGroup\Transaction\TransactionHandler;
-use function in_array;
 
 class SpyHandler implements TransactionHandler
 {
-    public const BEGIN = 'begin';
-    public const COMMIT = 'commit';
-    public const ROLLBACK = 'rollBack';
+    const BEGIN = 'begin';
+    const COMMIT = 'commit';
+    const ROLLBACK = 'rollBack';
 
     /** @var string[] */
     private $calls = [];
 
     public function begin(): void
     {
-        $this->logCall(self::BEGIN);
+        $this->addCall(self::BEGIN);
     }
 
     public function commit(): void
     {
-        $this->logCall(self::COMMIT);
+        $this->addCall(self::COMMIT);
     }
 
     public function rollBack(): void
     {
-        $this->logCall(self::ROLLBACK);
+        $this->addCall(self::ROLLBACK);
     }
 
-    /** @return string[] */
+    /**
+     * @return string[]
+     */
     public function getCalls(): array
     {
         return $this->calls;
     }
 
-    private function logCall(string $call): void
+    private function addCall(string $call): void
     {
         assert(in_array($call, [self::BEGIN, self::COMMIT, self::ROLLBACK]));
+
         $this->calls[] = $call;
     }
 }

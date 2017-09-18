@@ -25,150 +25,71 @@ declare(strict_types=1);
 
 namespace Test\LitGroup\Transaction;
 
-use LitGroup\Transaction\Exception\StateException;
-use LitGroup\Transaction\Exception\TransactionException;
+use LitGroup\Transaction\StateException;
 use LitGroup\Transaction\TransactionHandler;
 use LitGroup\Transaction\TransactionManager;
 use PHPUnit\Framework\TestCase;
 
 class TransactionManagerTest extends TestCase
 {
-    /** @var TransactionManager */
-    private $manager;
-
-    /** @var SpyHandler */
-    private $handler;
-
-    protected function setUp(): void
+    function testTransactionManage(): void
     {
-        $this->handler = new SpyHandler();
-        $this->manager = new TransactionManager($this->handler);
-    }
+        $handler = new SpyHandler();
+        $manager = new TransactionManager($handler);
 
-    function testTransaction(): void
-    {
-        $this->manager->beginTransaction()->commit();
-        $this->manager->beginTransaction()->rollBack();
-        $this->manager->beginTransaction();
+        $transaction = $manager->beginTransaction();
+        $transaction->commit();
+
+        $transaction = $manager->beginTransaction();
+        $transaction->rollBack();
 
         self::assertSame(
-            [
-                SpyHandler::BEGIN,
-                SpyHandler::COMMIT,
-                SpyHandler::BEGIN,
-                SpyHandler::ROLLBACK,
-                SpyHandler::BEGIN
-            ],
-            $this->handler->getCalls()
+            [SpyHandler::BEGIN, SpyHandler::COMMIT, SpyHandler::BEGIN, SpyHandler::ROLLBACK],
+            $handler->getCalls()
         );
     }
 
-    function testStateExceptionOnDuplicationOfTransaction(): void
+    function testOnlyOneTransactionCanExist(): void
     {
-        $this->manager->beginTransaction();
-
-        $this->expectException(StateException::class);
-        $this->manager->beginTransaction();
-    }
-
-    function testStartNewTransactionAfterExceptionOnBegin(): void
-    {
-        $handler = $this->createMock(TransactionHandler::class);
-        $handler->expects($this->at(0))->method('begin')->willThrowException(new TransactionException());
-        $handler->expects($this->at(1))->method('begin')->willReturn(null);
-
+        $handler = new SpyHandler();
         $manager = new TransactionManager($handler);
 
+        $manager->beginTransaction();
         try {
             $manager->beginTransaction();
-            $this->fail();
-        } catch (TransactionException $e) {}
+            $this->fail('Only one transaction can exist.');
+        } catch (StateException $e) {}
 
-        $manager->beginTransaction();
+        self::assertSame([SpyHandler::BEGIN], $handler->getCalls());
     }
 
-    function testStartNewTransactionAfterExceptionOnCommitOrRollback(): void
+    function testTransactionalRun(): void
     {
-        $handler = $this->createMock(TransactionHandler::class);
-        $handler->method('commit')->willThrowException(new TransactionException());
-        $handler->method('rollBack')->willThrowException(new TransactionException());
-
+        $handler = new SpyHandler();
         $manager = new TransactionManager($handler);
 
-        $transaction = $manager->beginTransaction();
-        try {
-            $transaction->commit();
-            $this->fail();
-        } catch (TransactionException $e) {}
+        $result = $manager->runTransactional(function () use ($handler) {
+            self::assertSame([SpyHandler::BEGIN], $handler->getCalls());
 
-        $transaction = $manager->beginTransaction();
-        try {
-            $transaction->rollBack();
-            $this->fail();
-        } catch (TransactionException $e) {}
-
-        $manager->beginTransaction();
-    }
-
-    function testRunTransactional(): void
-    {
-        $returned = $this->manager->runTransactional(function () {
-            return 'result';
+            return 'some result';
         });
 
-        self::assertSame('result', $returned);
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $this->handler->getCalls());
+        self::assertSame('some result', $result);
+        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
     }
 
-    function testRunTransactional_Exception(): void
+    function testTransactionalRunException(): void
     {
-        $exception = new \Exception();
+        $handler = new SpyHandler();
+        $manager = new TransactionManager($handler);
 
         try {
-            $this->manager->runTransactional(function () use ($exception) {
-                throw $exception;
+            $manager->runTransactional(function () use ($handler) {
+                throw new ExampleException();
             });
-            $this->fail();
-        } catch (\Exception $caught) {
-            self::assertSame($exception, $caught);
-        }
+            $this->fail('Exception must be rethrown.');
+        } catch (ExampleException $e) {}
 
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $this->handler->getCalls());
-    }
-
-    function testRunTransactional_ExceptionOfTransactionOnBegin(): void
-    {
-        $handler = $this->createMock(TransactionHandler::class);
-        $handler->expects($this->at(0))->method('begin')->willThrowException(new TransactionException());
-        $handler->expects($this->at(1))->method('begin')->willReturn(null);
-        $handler->expects($this->never())->method('rollBack');
-        $manager = new TransactionManager($handler);
-
-
-        try {
-            $manager->runTransactional(function () {});
-            $this->fail();
-        } catch (TransactionException $e) {}
-
-        // Try to open new transaction after exception:
-        $manager->runTransactional(function () {});
-    }
-
-    function testRunTransactional_ExceptionOfTransactionOnCommit(): void
-    {
-        $handler = $this->createMock(TransactionHandler::class);
-        $handler->expects($this->at(1))->method('commit')->willThrowException(new TransactionException());
-        $handler->expects($this->at(2))->method('commit')->willReturn(null);
-        $handler->expects($this->never())->method('rollBack');
-        $manager = new TransactionManager($handler);
-
-
-        try {
-            $manager->runTransactional(function () {});
-            $this->fail();
-        } catch (TransactionException $e) {}
-
-        // Try to open new transaction after exception:
-        $manager->runTransactional(function () {});
+        self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
     }
 }

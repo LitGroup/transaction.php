@@ -26,8 +26,6 @@ declare(strict_types=1);
 namespace LitGroup\Transaction;
 
 use function call_user_func;
-use LitGroup\Transaction\Exception\StateException;
-use LitGroup\Transaction\Exception\TransactionException;
 
 class TransactionManager
 {
@@ -36,44 +34,31 @@ class TransactionManager
 
     public function __construct(TransactionHandler $handler)
     {
-        $this->handler = new SerialTransactionHandler($handler);
+        $this->handler = new SingleActiveTransactionHandler($handler);
     }
 
-    /**
-     * Starts a transaction.
-     *
-     * New transaction cannot be created before previous will be closed.
-     *
-     * @return Transaction
-     */
     public function beginTransaction(): Transaction
     {
         return new Transaction($this->getHandler());
     }
 
-
     /**
-     * Run some code in the transaction.
-     *
-     * @throws \Exception Rethrows exception thrown by $code.
-     * @throws TransactionException
-     *
-     * @return mixed Value returned by $code.
+     * @return mixed
+     * @throws \Exception
      */
-    public function runTransactional(callable $code)
+    public function runTransactional(callable $func)
     {
-
         $transaction = $this->beginTransaction();
+
         try {
-            $result = call_user_func($code);
+            $result = call_user_func($func);
+            $transaction->commit();
+
+            return $result;
         } catch (\Exception $e) {
             $transaction->rollBack();
             throw $e;
         }
-        // Commit outside of try-catch to prevent rollBack() on exception from transaction handler;
-        $transaction->commit();
-
-        return $result;
     }
 
     private function getHandler(): TransactionHandler
@@ -83,17 +68,16 @@ class TransactionManager
 }
 
 /**
- * Allows only one transaction to be open.
- *
  * @internal
  */
-class SerialTransactionHandler implements TransactionHandler
+class SingleActiveTransactionHandler implements TransactionHandler
 {
-    /** @var TransactionHandler */
+    /**
+     * @var TransactionHandler
+     */
     private $handler;
 
-    /** @var bool */
-    private $transactionIsOpen = false;
+    private $open = false;
 
     public function __construct(TransactionHandler $handler)
     {
@@ -103,29 +87,23 @@ class SerialTransactionHandler implements TransactionHandler
     public function begin(): void
     {
         if ($this->transactionIsOpen()) {
-            throw new StateException('Transaction has been already started.');
+            throw new StateException('Only one active transaction can exist.');
         }
 
+        $this->openTransaction();
         $this->getHandler()->begin();
-        $this->setTransactionIsOpen(true);
     }
 
     public function commit(): void
     {
-        try {
-            $this->getHandler()->commit();
-        } finally {
-            $this->setTransactionIsOpen(false);
-        }
+        $this->closeTransaction();
+        $this->getHandler()->commit();
     }
 
     public function rollBack(): void
     {
-        try{
-            $this->getHandler()->rollBack();
-        } finally {
-            $this->setTransactionIsOpen(false);
-        }
+        $this->closeTransaction();
+        $this->getHandler()->rollBack();
     }
 
     private function getHandler(): TransactionHandler
@@ -133,13 +111,18 @@ class SerialTransactionHandler implements TransactionHandler
         return $this->handler;
     }
 
-    private function transactionIsOpen(): bool
+    private function openTransaction(): void
     {
-        return $this->transactionIsOpen;
+        $this->open = true;
     }
 
-    private function setTransactionIsOpen(bool $value): void
+    private function closeTransaction(): void
     {
-        $this->transactionIsOpen = $value;
+        $this->open = false;
+    }
+
+    private function transactionIsOpen(): bool
+    {
+        return $this->open;
     }
 }

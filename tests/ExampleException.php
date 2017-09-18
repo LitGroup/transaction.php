@@ -23,12 +23,7 @@
 
 declare(strict_types=1);
 
-namespace LitGroup\Transaction\Exception;
+namespace Test\LitGroup\Transaction;
 
-class TransactionException extends \Exception
-{
-    public function __construct(string $message = '', \Exception $previous = null)
-    {
-        parent::__construct($message, 0, $previous);
-    }
-}
+
+class ExampleException extends \Exception {}
