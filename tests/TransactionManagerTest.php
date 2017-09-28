@@ -92,4 +92,17 @@ class TransactionManagerTest extends TestCase
 
         self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
     }
+
+    function testExceptionOnCommitDurinRunTransactional(): void
+    {
+        $handler = $this->createMock(TransactionHandler::class);
+        $handler->expects($this->never())->method('rollBack');
+        $handler->method('commit')->willThrowException(new ExampleException());
+
+        $manager = new TransactionManager($handler);
+        try {
+            $manager->runTransactional(function () use ($handler) {/* Nothing to do */});
+            $this->fail('Exception must be rethrown.');
+        } catch (ExampleException $e) {}
+    }
 }
