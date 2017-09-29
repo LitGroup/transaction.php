@@ -10,7 +10,7 @@
 ## Installation
 
 ```bash
-composer require litgroup/transaction:^0.2.0
+composer require litgroup/transaction:^0.2.1
 ```
 
 ## Example of usage
