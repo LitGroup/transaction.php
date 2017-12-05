@@ -33,14 +33,14 @@ class SpyHandlerTest extends TestCase
     function testCallsLogging(): void
     {
         $handler = new SpyHandler();
-        self::assertInstanceOf(TransactionHandler::class, $handler);
-        self::assertSame([], $handler->getCalls());
+        $this->assertInstanceOf(TransactionHandler::class, $handler);
+        $this->assertSame([], $handler->getCalls());
 
         $handler->begin();
         $handler->commit();
         $handler->rollBack();
 
-        self::assertSame(
+        $this->assertSame(
             [SpyHandler::BEGIN, SpyHandler::COMMIT, SpyHandler::ROLLBACK],
             $handler->getCalls()
         );

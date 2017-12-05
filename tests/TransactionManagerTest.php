@@ -43,7 +43,7 @@ class TransactionManagerTest extends TestCase
         $transaction = $manager->beginTransaction();
         $transaction->rollBack();
 
-        self::assertSame(
+        $this->assertSame(
             [SpyHandler::BEGIN, SpyHandler::COMMIT, SpyHandler::BEGIN, SpyHandler::ROLLBACK],
             $handler->getCalls()
         );
@@ -60,7 +60,7 @@ class TransactionManagerTest extends TestCase
             $this->fail('Only one transaction can exist.');
         } catch (StateException $e) {}
 
-        self::assertSame([SpyHandler::BEGIN], $handler->getCalls());
+        $this->assertSame([SpyHandler::BEGIN], $handler->getCalls());
     }
 
     function testTransactionalRun(): void
@@ -69,13 +69,13 @@ class TransactionManagerTest extends TestCase
         $manager = new TransactionManager($handler);
 
         $result = $manager->runTransactional(function () use ($handler) {
-            self::assertSame([SpyHandler::BEGIN], $handler->getCalls());
+            $this->assertSame([SpyHandler::BEGIN], $handler->getCalls());
 
             return 'some result';
         });
 
-        self::assertSame('some result', $result);
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
+        $this->assertSame('some result', $result);
+        $this->assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
     }
 
     function testTransactionalRunException(): void
@@ -90,7 +90,7 @@ class TransactionManagerTest extends TestCase
             $this->fail('Exception must be rethrown.');
         } catch (ExampleException $e) {}
 
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
+        $this->assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
     }
 
     function testExceptionOnCommitDurinRunTransactional(): void

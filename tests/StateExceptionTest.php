@@ -34,7 +34,7 @@ class StateExceptionTest extends TestCase
     {
         $exception = new StateException('Some message');
 
-        self::assertInstanceOf(\RuntimeException::class, $exception);
-        self::assertEquals('Some message', $exception->getMessage());
+        $this->assertInstanceOf(\RuntimeException::class, $exception);
+        $this->assertEquals('Some message', $exception->getMessage());
     }
 }

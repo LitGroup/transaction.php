@@ -37,7 +37,7 @@ class TransactionTest extends TestCase
         $handler = new SpyHandler();
         new Transaction($handler);
 
-        self::assertSame([SpyHandler::BEGIN], $handler->getCalls());
+        $this->assertSame([SpyHandler::BEGIN], $handler->getCalls());
     }
 
     function testCommit(): void
@@ -46,7 +46,7 @@ class TransactionTest extends TestCase
         $transaction = new Transaction($handler);
 
         $transaction->commit();
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
+        $this->assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
     }
 
     function testRollingBack(): void
@@ -55,7 +55,7 @@ class TransactionTest extends TestCase
         $transaction = new Transaction($handler);
 
         $transaction->rollBack();
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
+        $this->assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
     }
 
     function testCommitClosedTransaction(): void
@@ -68,7 +68,7 @@ class TransactionTest extends TestCase
             $this->fail('Cannot commit closed transaction.');
         } catch (StateException $e) {}
 
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
+        $this->assertSame([SpyHandler::BEGIN, SpyHandler::COMMIT], $handler->getCalls());
     }
 
     function testRollBackClosedTransaction(): void
@@ -81,7 +81,7 @@ class TransactionTest extends TestCase
             $this->fail('Cannot commit closed transaction.');
         } catch (StateException $e) {}
 
-        self::assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
+        $this->assertSame([SpyHandler::BEGIN, SpyHandler::ROLLBACK], $handler->getCalls());
     }
 
     function testTransactionClosedAfterCommitException(): void
